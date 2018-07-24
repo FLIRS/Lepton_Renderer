@@ -23,10 +23,12 @@ char const * glGetError_str (GLenum e)
 
 void assert_gl (const char *file, int line)
 {
+	GLenum e = glGetError ();
+	if (e == GL_NO_ERROR) {return;}
 	while (1)
 	{
-		GLenum e = glGetError ();
-		if (e == GL_NO_ERROR) {return;}
+		e = glGetError ();
+		if (e == GL_NO_ERROR) {break;}
 		fprintf (stderr, "%s:%i %s (%i)", file, line, glGetError_str (e), e);
 	}
 	abort ();

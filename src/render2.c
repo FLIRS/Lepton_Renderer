@@ -17,9 +17,20 @@
 #include "texture.h"
 
 
-#define APP_TEX_W 100
-#define APP_TEX_H 100
+#define APP_TEX_W 160
+#define APP_TEX_H 120
 #define APP_TEX_WH (APP_TEX_W * APP_TEX_H)
+
+
+
+void read_image (uint16_t * pixmap)
+{
+	int const size = sizeof (uint16_t [APP_TEX_W * APP_TEX_H]);
+	int r = read (STDIN_FILENO, pixmap, size);
+	ASSERT_F (r == size, "read () error. Read %d of %d", r, size);
+	
+	//printf ("r %i\n", pixmap [0]);
+}
 
 
 
@@ -30,7 +41,7 @@ int main(int argc, char *argv[])
 		int C = getopt (argc, argv, "");
 		if (C == - 1) {break;}
 		switch (C)
-		{	
+		{
 			default:
 			break;
 		}
@@ -42,7 +53,8 @@ int main(int argc, char *argv[])
 	config.win_y = SDL_WINDOWPOS_UNDEFINED;
 	config.win_w = 1920;
 	config.win_h = 1080;
-	config.win_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
+	config.win_flags = SDL_WINDOW_OPENGL;
+	//config.win_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
 	config.shader_name_fragment = "src/cam2d.glfs";
 	config.shader_name_vertex = "src/cam2d.glvs";
 	
@@ -102,9 +114,11 @@ int main(int argc, char *argv[])
 		
 		for (size_t i = 0; i < COUNTOF (raw); i = i + 1)
 		{
-			raw [i] = raw [i] * 3;
+			//raw [i] = raw [i] * 3;
 			//printf ("%i ", raw [i]);
 		}
+		
+		read_image (raw);
 		
 		{
 			uint16_t min = UINT16_MAX;

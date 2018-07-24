@@ -6,26 +6,54 @@
 
 struct Texture
 {
+	//Used for glGenTextures, glBindTexture
 	GLuint id;
+	
+	//The texture variable name of the shader program.
+	//Used for glGetUniformLocation
 	char * name;
+
+	//A texture unit consists of the texture enable state,
+	//texture matrix stack, texture environment and currently bound
+	//texture. Modifying any of these states has an effect only on
+	//the active texture unit.
+	//Used for glActiveTexture, glUniform1i
+	int unit;
+
+	//Image format.
+	//Used for glTexImage2D, glTexSubImage2D
 	int w;
 	int h;
 	GLenum format;
+	
+	//Image data.
 	void * data;
-	int unit;
 };
 
 
 void tex_create (struct Texture * tex, GLuint program)
 {
-	glGenTextures (1, &(tex->id));
+	GLint max_image_units;
+	glGetIntegerv (GL_MAX_TEXTURE_IMAGE_UNITS, &max_image_units);
+	ASSERT (tex->unit >= 0);
+	ASSERT (tex->unit < max_image_units);
+	TRACE_F ("GL_MAX_TEXTURE_IMAGE_UNITS %i", max_image_units);
+	
+	
+	
+	//glActiveTexture selects which texture unit subsequent texture state calls will affect. 
+	//The number of texture units an implementation supports is implementation dependent, but must be at least 80. 
 	glActiveTexture (GL_TEXTURE0 + tex->unit);
+	
+	//glTex* functions will modify current bound texture.
+	glGenTextures (1, &(tex->id));
 	glBindTexture (GL_TEXTURE_2D, tex->id);
 	
 	glTexImage2D (GL_TEXTURE_2D, 0, tex->format, tex->w, tex->h, 0, tex->format, GL_UNSIGNED_BYTE, NULL);
 	ASSERT_GL;
 	
 	{
+		//TODO: Do we need to store the UniformLocation integer?
 		GLint r = glGetUniformLocation (program, tex->name);
 		ASSERT (r >= 0);
 		ASSERT_GL;

@@ -73,17 +73,16 @@ static void trace_format
 {
 	va_list list;
 	va_start (list, fmt);
-	fprintf	
-	(
-		stderr,
-		"TRACE %04i [%s:%04i in %s ()] [%s %i]: ",
-		id, 
-		file, 
-		line, 
-		fn,
-		scode,
-		code
-	);
+	
+	fprintf (stderr, TCOL (TCOL_BOLD, TCOL_YELLOW, TCOL_DEFAULT) "TRACE %04i" TCOL_RESET " ", id);
+	fprintf (stderr, TCOL (TCOL_BOLD, TCOL_BLUE, TCOL_DEFAULT) "%s" TCOL_RESET ":", file);
+	fprintf (stderr, TCOL (TCOL_BOLD, TCOL_BLUE, TCOL_DEFAULT) "%04i" TCOL_RESET " in ", line);
+	fprintf (stderr, TCOL (TCOL_NORMAL, TCOL_YELLOW , TCOL_DEFAULT) "%s" TCOL_RESET " ()", fn);
+	if (scode)
+	{
+		fprintf (stderr, TCOL (TCOL_BOLD, TCOL_BLACK, TCOL_BLUE) " [%i %s]" TCOL_RESET " ", code, scode);
+	}
+	fprintf (stderr, ": ");
 	vfprintf (stderr, fmt, list);
 	fprintf (stderr, "\n");
 	va_end (list);
