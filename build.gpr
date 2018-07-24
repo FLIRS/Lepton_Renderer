@@ -11,7 +11,8 @@ project Build is
 	
 	Main_Files := 
 	(
-		"render.c"
+		"render.c",
+		"render2.c"
 	);
 	
 	for Main use Main_Files;
@@ -57,6 +58,7 @@ project Build is
 			""
 		);
 		for Switches ("render.c") use SDL_Flags & ("-lm", "-lGLESv2", "-lEGL");
+		for Switches ("render2.c") use SDL_Flags & ("-lm", "-lGLESv2", "-lEGL");
 		
 	end Linker;
 

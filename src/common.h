@@ -9,7 +9,7 @@
 
 #define MIN(a, b) (((a)<(b))?(a):(b))
 #define MAX(a, b) (((a)>(b))?(a):(b))
-#define COUNTE(x) (sizeof(x) / sizeof(*(x)))
+#define COUNTOF(x) (sizeof(x) / sizeof(*(x)))
 
 uint32_t str_u32 (char const * str)
 {
