@@ -25,7 +25,7 @@
 
 void read_image (uint16_t * pixmap)
 {
-	int const size = sizeof (uint16_t [APP_TEX_W * APP_TEX_H]);
+	int const size = APP_TEX_WH * sizeof (uint16_t);
 	int r = read (STDIN_FILENO, pixmap, size);
 	ASSERT_F (r == size, "read () error. Read %d of %d", r, size);
 	
@@ -62,23 +62,25 @@ int main(int argc, char *argv[])
 	app_init (&app, &config);
 	
 	
-	struct Pixel_ABGR8888 image [APP_TEX_W * APP_TEX_H];
+	//struct Pixel_ABGR8888 image [APP_TEX_W * APP_TEX_H];
+	uint16_t raw [APP_TEX_WH];
+	for (size_t i = 0; i < APP_TEX_WH; i = i + 1)
+	{
+		raw [i] = i;
+	}
 	struct Texture tex;
-	tex.data = image;
+	tex.data = raw;
 	tex.unit = 0;
 	tex.name = "tex";
 	tex.w = APP_TEX_W;
 	tex.h = APP_TEX_H;
-	tex.format = GL_RGBA;
+	tex.format = GL_ALPHA;
+	tex.type = GL_UNSIGNED_SHORT;
 	tex_create (&tex, app.program);
 	
-	
-	uint16_t raw [APP_TEX_WH];
-	for (size_t i = 0; i < COUNTOF (raw); i = i + 1)
-	{
-		raw [i] = i % 255;
-	}
-	
+
+
+
 	
 	
 	while (1)
@@ -123,11 +125,9 @@ int main(int argc, char *argv[])
 		{
 			uint16_t min = UINT16_MAX;
 			uint16_t max = 0;
-			find_range_u16v (raw, COUNTOF (raw), &min, &max);
-			map_lin_u16v (raw, COUNTOF (raw), min, max, 0, 255);
-			map_indexed_u16_ABGR8888 (raw, image, APP_TEX_WH, PALLETE_HEATMAP, COUNTOF (PALLETE_HEATMAP));
+			find_range_u16v (raw, APP_TEX_WH, &min, &max);
+			map_lin_u16v (raw, raw, APP_TEX_WH, min, max, 0, UINT16_MAX - 1);
 		}
-		
 		tex_update (&tex);
 		app_draw (&app);
 

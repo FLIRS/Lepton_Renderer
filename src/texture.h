@@ -25,6 +25,7 @@ struct Texture
 	int w;
 	int h;
 	GLenum format;
+	GLenum type;
 	
 	//Image data.
 	void * data;
@@ -39,8 +40,6 @@ void tex_create (struct Texture * tex, GLuint program)
 	ASSERT (tex->unit < max_image_units);
 	TRACE_F ("GL_MAX_TEXTURE_IMAGE_UNITS %i", max_image_units);
 	
-	
-	
 	//glActiveTexture selects which texture unit subsequent texture state calls will affect. 
 	//The number of texture units an implementation supports is implementation dependent, but must be at least 80. 
 	glActiveTexture (GL_TEXTURE0 + tex->unit);
@@ -49,7 +48,7 @@ void tex_create (struct Texture * tex, GLuint program)
 	glGenTextures (1, &(tex->id));
 	glBindTexture (GL_TEXTURE_2D, tex->id);
 	
-	glTexImage2D (GL_TEXTURE_2D, 0, tex->format, tex->w, tex->h, 0, tex->format, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D (GL_TEXTURE_2D, 0, tex->format, tex->w, tex->h, 0, tex->format, tex->type, NULL);
 	ASSERT_GL;
 	
 	{
@@ -72,6 +71,6 @@ void tex_create (struct Texture * tex, GLuint program)
 
 void tex_update (struct Texture * tex)
 {
-	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, tex->w, tex->h, tex->format, GL_UNSIGNED_BYTE, tex->data);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, tex->w, tex->h, tex->format, tex->type, tex->data);
 	ASSERT_GL;
 }

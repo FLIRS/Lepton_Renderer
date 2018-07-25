@@ -5,14 +5,17 @@ project Build is
 	for Exec_Dir use "bin";
 	for Source_Dirs use 
 	(
-		"src"
+		"src",
+		"src/test_map"
 	);
 	
 	
 	Main_Files := 
 	(
-		"render.c",
-		"render2.c"
+		--"render.c",
+		"test_map1.c",
+		"render2.c",
+		"default.c"
 	);
 	
 	for Main use Main_Files;
