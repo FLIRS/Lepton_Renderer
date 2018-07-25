@@ -2,6 +2,7 @@
 
 #include "vertex.h"
 #include "shader.h"
+#include "common_gl.h"
 
 /*
 #define APP_SHORT_NAME "Short app name"
@@ -110,14 +111,16 @@ void app_init (struct Application * app, struct Config * config)
 void app_draw (struct Application * app)
 {
 	glClear (GL_COLOR_BUFFER_BIT);
+	ASSERT_GL;
 	glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+	ASSERT_GL;
 	SDL_GL_SwapWindow (app->window);
+	ASSERT_GL;
 }
 
 
 void app_quit (struct Application * app)
 {
-	TRACE ("app_quit");
 	glUseProgram (0);
 	glDisableVertexAttribArray (0);
 	glDeleteProgram (app->program);

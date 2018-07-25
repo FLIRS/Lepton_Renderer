@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
 	config.win_h = 1080;
 	config.win_flags = SDL_WINDOW_OPENGL;
 	//config.win_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
-	config.shader_name_fragment = "src/cam2d.glfs";
-	config.shader_name_vertex = "src/cam2d.glvs";
+	config.shader_name_fragment = "src/common/cam2d.glfs";
+	config.shader_name_vertex = "src/common/cam2d.glvs";
 	
 	struct Application app;
 	app_init (&app, &config);
@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
 	{
 		raw [i] = i;
 	}
+	
 	struct Texture tex;
 	tex.data = raw;
 	tex.unit = 0;
@@ -78,10 +79,35 @@ int main(int argc, char *argv[])
 	tex.type = GL_UNSIGNED_SHORT;
 	tex_create (&tex, app.program);
 	
-
-
+	
+	
+	struct Pixel_ABGR8888 heatmap [256];
+	{
+		int r = pix_load (heatmap, COUNTOF (heatmap), "src/common/heatmap.txt");
+		ASSERT (r == COUNTOF (heatmap));
+	}
+	/*
+	for (size_t i = 0; i < COUNTOF (heatmap); i = i + 1)
+	{
+		heatmap [i].r = (1+ i * 1) % 255;
+		heatmap [i].g = (1+ i * 2) % 255;
+		heatmap [i].b = (1+ i * 3) % 255;
+		heatmap [i].a = UINT8_MAX;
+	}
+	*/
+	
+	struct Pallete pal;
+	pal.data = heatmap;
+	pal.unit = 1;
+	pal.name = "pallete";
+	pal.w = COUNTOF (heatmap);
+	pal.format = GL_RGBA;
+	pal.type = GL_UNSIGNED_BYTE;
+	pallete_create (&pal, app.program);
 
 	
+
+
 	
 	while (1)
 	{
@@ -128,9 +154,13 @@ int main(int argc, char *argv[])
 			find_range_u16v (raw, APP_TEX_WH, &min, &max);
 			map_lin_u16v (raw, raw, APP_TEX_WH, min, max, 0, UINT16_MAX - 1);
 		}
+		
+
 		tex_update (&tex);
+		pallete_update (&pal);
 		app_draw (&app);
 
+		
 	}
 	
 main_quit:

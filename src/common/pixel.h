@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "map.h"
+#include "debug.h"
 
 struct __attribute__((__packed__)) Pixel_ABGR8888
 {
@@ -31,8 +32,7 @@ struct Pixel_ABGR8888 const PALLETE_BLACK_WHITE [2] = {{0, 0, 0, 0}, {0, 255, 25
 
 
 
-
-
+/*
 void map_indexed_u16_ABGR8888 
 (
 	uint16_t const * source, 
@@ -73,4 +73,27 @@ void map_indexed_float_ABGR8888
       destination [i].b = pallete [j].b;
       destination [i].a = 255;
    }
+}
+*/
+
+
+
+int pix_load (struct Pixel_ABGR8888 * pix, size_t count, char const * filename)
+{
+	ASSERT (pix != NULL);
+	ASSERT (filename != NULL);
+	FILE * file = fopen (filename, "r");
+	ASSERT (file != NULL);
+	size_t i = 0;
+	while (1)
+	{
+		if (i == count) {break;}
+		int r = fscanf (file, "%hhu %hhu %hhu %hhu\n", &(pix [i].a), &(pix [i].b), &(pix [i].g), &(pix [i].r));
+		if (r == EOF) {break;}
+		if (r < 0) {break; i = r;}
+		//TRACE_F ("%i %i %i %i", pix [i].r, pix [i].g, pix [i].b, pix [i].a);
+		i++;
+	}
+	fclose (file);
+	return i;
 }
