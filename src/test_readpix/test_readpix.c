@@ -22,12 +22,26 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	struct Pixel_ABGR8888 p [256];
 	
-	int r = pix_load (p, COUNTOF (p), "src/common/heatmap.txt");
-	for (int i = 0; i < r; i = i + 1)
+	struct __attribute__((__packed__)) Pixel
 	{
-		printf ("%i: %i %i %i %i\n", i, p [i].r, p [i].g, p [i].b, p [i].a);
+		 uint8_t a;
+		 uint8_t b;
+		 uint8_t g;
+		 uint8_t r;
+	};
+	
+	struct Pixel p [256];
+	size_t n = 4;
+	size_t depth = sizeof (uint8_t);
+	size_t l = sizeof (p) / depth;
+	int r = pix_load ((uint8_t *)p, &l, "src/common/heatmap.txt", depth);
+	TRACE_F ("%i", r);
+	TRACE_F ("%i", l);
+	
+	for (size_t i = 0; i < (l / n); i = i + 1)
+	{
+		printf ("%3i: %3i %3i %3i %3i\n", i, p [i].r, p [i].g, p [i].b, p [i].a);
 	}
 
 	return 0;

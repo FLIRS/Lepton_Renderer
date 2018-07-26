@@ -18,19 +18,9 @@
 
 
 #define APP_TEX_W 160
-#define APP_TEX_H 120
+#define APP_TEX_H 420
 #define APP_TEX_WH (APP_TEX_W * APP_TEX_H)
 
-
-
-void read_image (uint16_t * pixmap)
-{
-	int const size = APP_TEX_WH * sizeof (uint16_t);
-	int r = read (STDIN_FILENO, pixmap, size);
-	ASSERT_F (r == size, "read () error. Read %d of %d", r, size);
-	
-	//printf ("r %i\n", pixmap [0]);
-}
 
 
 
@@ -88,6 +78,8 @@ int main(int argc, char *argv[])
 		ASSERT (r == 0);
 	}
 	
+	TRACE_F ("%i", heatmap_count);
+	
 	struct Pallete pal;
 	pal.data = heatmap;
 	pal.unit = 1;
@@ -132,22 +124,6 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		for (size_t i = 0; i < COUNTOF (raw); i = i + 1)
-		{
-			//raw [i] = raw [i] * 3;
-			//printf ("%i ", raw [i]);
-		}
-		
-		read_image (raw);
-		
-		{
-			uint16_t min = UINT16_MAX;
-			uint16_t max = 0;
-			find_range_u16v (raw, APP_TEX_WH, &min, &max);
-			map_lin_u16v (raw, raw, APP_TEX_WH, min, max, 0, UINT16_MAX - 1);
-		}
-		
-
 		tex_update (&tex);
 		pallete_update (&pal);
 		app_draw (&app);

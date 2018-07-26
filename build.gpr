@@ -8,6 +8,7 @@ project Build is
 		"src",
 		"src/test_map",
 		"src/test_readpix",
+		"src/test_pallete",
 		"src/simple_rendering",
 		"src/common"
 	);
@@ -17,7 +18,8 @@ project Build is
 	(
 		--"render.c",
 		--"test_map1.c",
-		--"test_readpix.c",
+		"test_readpix.c",
+		"test_pallete.c",
 		"simple_rendering1.c",
 		"default.c"
 	);
@@ -65,6 +67,7 @@ project Build is
 			""
 		);
 		for Switches ("simple_rendering1.c") use SDL_Flags & ("-lm", "-lGLESv2", "-lEGL");
+		for Switches ("test_pallete.c") use SDL_Flags & ("-lm", "-lGLESv2", "-lEGL");
 		
 	end Linker;
 

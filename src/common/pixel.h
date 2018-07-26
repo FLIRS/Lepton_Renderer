@@ -11,6 +11,8 @@
 #include "map.h"
 #include "debug.h"
 
+
+/*
 struct __attribute__((__packed__)) Pixel_ABGR8888
 {
    union
@@ -31,7 +33,7 @@ struct Pixel_ABGR8888 const PALLETE_HEATMAP [256] = {{  0, 255, 255, 255}, {  0,
 struct Pixel_ABGR8888 const PALLETE_BLACK_WHITE [2] = {{0, 0, 0, 0}, {0, 255, 255, 255}};
 
 
-
+*/
 /*
 void map_indexed_u16_ABGR8888 
 (
@@ -78,22 +80,44 @@ void map_indexed_float_ABGR8888
 
 
 
-int pix_load (struct Pixel_ABGR8888 * pix, size_t count, char const * filename)
+int pix_load 
+(
+	uint8_t * pix, 
+	size_t * count, 
+	char const * filename,
+	size_t depth
+)
 {
 	ASSERT (pix != NULL);
 	ASSERT (filename != NULL);
 	FILE * file = fopen (filename, "r");
 	ASSERT (file != NULL);
 	size_t i = 0;
+	char * s = NULL;
+	int r = -1;
+	
+	switch (depth)
+	{
+		case 1:
+		s = "%hhu";
+		break;
+		default:
+		ASSERT_F (0, "Unsupported depth%s", "");
+		break;
+	}
+	
 	while (1)
 	{
-		if (i == count) {break;}
-		int r = fscanf (file, "%hhu %hhu %hhu %hhu\n", &(pix [i].a), &(pix [i].b), &(pix [i].g), &(pix [i].r));
-		if (r == EOF) {break;}
-		if (r < 0) {break; i = r;}
-		//TRACE_F ("%i %i %i %i", pix [i].r, pix [i].g, pix [i].b, pix [i].a);
-		i++;
+		if (i == count [0]) {r = 0; break;}
+		int l = fscanf (file, s, pix);
+		if (l == EOF) {r = 0; break;}
+		if (l < 0) {r = l; break;}
+		pix += depth;
+		i ++;
 	}
+	
+	count [0] = i;
+	
 	fclose (file);
-	return i;
+	return r;
 }

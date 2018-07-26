@@ -7,7 +7,7 @@ void main()
 {
 	vec4 c = texture2D (tex, Texcoord);
 	vec4 d = texture2D (pallete, vec2 (c.a, 0));
-	c = vec4 (d.r, d.g, d.b, 1.0);
+	c = vec4 (d.a, d.b, d.g, d.r);
 	gl_FragColor = c;
 }
 
