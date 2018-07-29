@@ -14,13 +14,37 @@
 #include "vertex.h"
 #include "pixel.h"
 #include "app.h"
-#include "texture.h"
 
 
-#define APP_TEX_W 160
-#define APP_TEX_H 420
-#define APP_TEX_WH (APP_TEX_W * APP_TEX_H)
+#define APP_TEX_W          256
+#define APP_TEX_H          1
+#define APP_TEX_WH         (APP_TEX_W * APP_TEX_H)
+#define APP_TEX_TYPE       GL_UNSIGNED_SHORT
+#define APP_TEX_FORMAT     GL_ALPHA
+#define APP_TEX_UNIT       0
+#define APP_TEX_MAG_FILTER GL_NEAREST
+//#define APP_TEX_MAG_FILTER GL_LINEAR
 
+
+#define APP_PAL_W          256
+#define APP_PAL_H          1
+#define APP_PAL_C          4
+#define APP_PAL_WHC        (APP_PAL_W * APP_PAL_H * APP_PAL_C)
+#define APP_PAL_TYPE       GL_UNSIGNED_BYTE
+#define APP_PAL_FORMAT     GL_RGBA
+#define APP_PAL_UNIT       1
+#define APP_PAL_MAG_FILTER GL_NEAREST
+//#define APP_PAL_MAG_FILTER GL_LINEAR
+
+
+
+void read_image (uint16_t * pixmap, int offset)
+{
+	for (size_t i = 0; i < APP_TEX_WH; i = i + 1)
+	{
+		pixmap [i] = 256 * (i + offset);
+	}
+}
 
 
 
@@ -51,48 +75,42 @@ int main(int argc, char *argv[])
 	struct Application app;
 	app_init (&app, &config);
 	
-	
-	//struct Pixel_ABGR8888 image [APP_TEX_W * APP_TEX_H];
 	uint16_t raw [APP_TEX_WH];
-	for (size_t i = 0; i < APP_TEX_WH; i = i + 1)
-	{
-		raw [i] = i;
-	}
-	
-	struct Texture tex;
-	tex.data = raw;
-	tex.unit = 0;
-	tex.name = "tex";
-	tex.w = APP_TEX_W;
-	tex.h = APP_TEX_H;
-	tex.format = GL_ALPHA;
-	tex.type = GL_UNSIGNED_SHORT;
-	tex_create (&tex, app.program);
-	
-	
-	
-	uint8_t heatmap [256 * 4];
-	size_t heatmap_count = COUNTOF (heatmap);
+	uint8_t heatmap [APP_PAL_WHC];
+	size_t heatmap_count = APP_PAL_WHC;
 	{
 		int r = pix_load (heatmap, &heatmap_count, "src/common/heatmap.txt", sizeof (uint8_t));
 		ASSERT (r == 0);
 	}
 	
-	TRACE_F ("%i", heatmap_count);
+	//Generate texture id for Lepton and Pallete.
+	GLuint tex [2];
+	glGenTextures (2, tex);
 	
-	struct Pallete pal;
-	pal.data = heatmap;
-	pal.unit = 1;
-	pal.name = "pallete";
-	pal.w = 256;
-	pal.format = GL_RGBA;
-	pal.type = GL_UNSIGNED_BYTE;
-	pallete_create (&pal, app.program);
+	//Setup Lepton texture format.
+	glActiveTexture (GL_TEXTURE0 + APP_TEX_UNIT);
+	glBindTexture (GL_TEXTURE_2D, tex [APP_TEX_UNIT]);
+	glUniform1i_name (app.program, "tex", APP_TEX_UNIT);
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, APP_TEX_W, APP_TEX_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_TEX_MAG_FILTER);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+	glGenerateMipmap (GL_TEXTURE_2D);
 
+	//Setup Pallete texture format.
+	glActiveTexture (GL_TEXTURE0 + APP_PAL_UNIT);
+	glBindTexture (GL_TEXTURE_2D, tex [APP_PAL_UNIT]);
+	glUniform1i_name (app.program, "pallete", APP_PAL_UNIT);
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_PAL_FORMAT, APP_PAL_W, APP_PAL_H, 0, APP_PAL_FORMAT, APP_PAL_TYPE, heatmap);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_PAL_MAG_FILTER);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+	glGenerateMipmap (GL_TEXTURE_2D);
 	
 
-
-	
+	int iii = 0;
 	while (1)
 	{
 		SDL_Event event;
@@ -124,8 +142,13 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		tex_update (&tex);
-		pallete_update (&pal);
+		
+		read_image (raw, iii);
+		iii++;
+		glBindTexture(GL_TEXTURE_2D, tex [0]);
+		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw);
+		//TODO: Find out why we need to bind the pallete texture.
+		glBindTexture (GL_TEXTURE_2D, tex [1]);
 		app_draw (&app);
 
 		
@@ -133,7 +156,7 @@ int main(int argc, char *argv[])
 	
 main_quit:
 
-	glDeleteTextures (1, &(tex.id));
+
 	app_quit (&app);
 	return 0;
 }

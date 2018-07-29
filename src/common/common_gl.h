@@ -27,9 +27,19 @@ void assert_gl (const char *file, int line)
 	if (e == GL_NO_ERROR) {return;}
 	while (1)
 	{
+		fprintf (stderr, "%s:%i %s (%i)", file, line, glGetError_str (e), e);
 		e = glGetError ();
 		if (e == GL_NO_ERROR) {break;}
-		fprintf (stderr, "%s:%i %s (%i)", file, line, glGetError_str (e), e);
 	}
-	abort ();
+	exit (1);
+}
+
+
+
+void glUniform1i_name (GLuint program, GLchar const * name, GLint v0)
+{
+	GLint location;
+	location = glGetUniformLocation (program, name);
+	ASSERT (location >= 0);
+	glUniform1i (location, v0);
 }

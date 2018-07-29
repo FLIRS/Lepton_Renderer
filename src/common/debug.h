@@ -53,7 +53,7 @@ static void assert_format
 	vfprintf (stderr, fmt, list);
 	fprintf (stderr, "\n");
 	va_end (list);
-	abort ();
+	exit (1);
 }
 
 
