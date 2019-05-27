@@ -93,7 +93,7 @@ int pix_load
 	FILE * file = fopen (filename, "r");
 	ASSERT (file != NULL);
 	size_t i = 0;
-	char * s = NULL;
+	char const * s = NULL;
 	int r = -1;
 	
 	switch (depth)
