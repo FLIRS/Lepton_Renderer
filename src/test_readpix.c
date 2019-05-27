@@ -13,9 +13,9 @@ int main(int argc, char *argv[])
 {
 	while (1)
 	{
-		int C = getopt (argc, argv, "");
-		if (C == - 1) {break;}
-		switch (C)
+		int c = getopt (argc, argv, "");
+		if (c == - 1) {break;}
+		switch (c)
 		{
 			default:
 			break;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	size_t n = 4;
 	size_t depth = sizeof (uint8_t);
 	size_t l = sizeof (p) / depth;
-	int r = pix_load ((uint8_t *)p, &l, "src/common/heatmap.txt", depth);
+	int r = pix_load ((uint8_t *)p, &l, "src/heatmap.txt", depth);
 	TRACE_F ("%i", r);
 	TRACE_F ("%i", l);
 	
