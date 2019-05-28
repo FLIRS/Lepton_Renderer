@@ -33,7 +33,6 @@ void find_range_u16v
 //Input X can get Integer overflow.
 int map_lin_int (int X, int A0, int A1, int B0, int B1)
 {
-	int x = X;
 	//Crop
 	if (X <= A0) {return B0;}
 	if (X >= A1) {return B1;}

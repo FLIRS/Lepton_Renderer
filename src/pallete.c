@@ -12,7 +12,8 @@
 #include "xgl.h"
 #include "pixel.h"
 #include "map.h"
-#include "app.h"
+#include "lepton.h"
+#include "reader.h"
 
 #define APP_TEX_TYPE       GL_UNSIGNED_SHORT
 #define APP_TEX_FORMAT     GL_ALPHA
@@ -52,6 +53,10 @@ void scale (uint16_t src [], uint16_t des [], uint32_t n)
 }
 
 
+
+
+
+
 int main(int argc, char *argv[])
 {
 	while (1)
@@ -66,7 +71,10 @@ int main(int argc, char *argv[])
 	}
 	
 	{int r = SDL_Init (SDL_INIT_VIDEO); ASSERT_F (r == 0, "SDL_Init: %s", SDL_GetError());}
+	SDL_ClearError ();
 	
+
+
 	SDL_Window * window;
 	SDL_GLContext context;
 	
@@ -125,13 +133,14 @@ int main(int argc, char *argv[])
 	glEnable (GL_BLEND);XGL_ASSERT_ERROR;
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);XGL_ASSERT_ERROR;
 	
-	uint16_t img_input [APP_SHARED_WH];
+	uint16_t img_input [LEP3_WH] = {0};
 	uint8_t heatmap [APP_PAL_WHC];
 	size_t heatmap_count = APP_PAL_WHC;
 	{
 		int r = pix_load (heatmap, &heatmap_count, "src/heatmap.txt", sizeof (uint8_t));
 		ASSERT (r == 0);
 	}
+	reader_start (img_input);
 	
 	//Generate texture id for Lepton and Pallete.
 	GLuint tex [2];XGL_ASSERT_ERROR;
@@ -141,8 +150,8 @@ int main(int argc, char *argv[])
 	glActiveTexture (GL_TEXTURE0 + APP_TEX_UNIT);XGL_ASSERT_ERROR;
 	glBindTexture (GL_TEXTURE_2D, tex [APP_TEX_UNIT]);XGL_ASSERT_ERROR;
 	xgl_uniform1i_set (program, "tex", APP_TEX_UNIT);
-	for (int i = 0; i < APP_SHARED_WH; i++){img_input [i] = i;}
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, APP_SHARED_W, APP_SHARED_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
+	for (uint16_t i = 0; i < LEP3_WH; i++){img_input [i] = i;}
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, LEP3_W, LEP3_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_TEX_MAG_FILTER);XGL_ASSERT_ERROR;
@@ -198,16 +207,18 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		//for (int i = 0; i < APP_SHARED_WH; i++){img_input [i] = i;}
-		{int r = read (STDIN_FILENO, img_input, sizeof (img_input)); ASSERT_F (r == sizeof (img_input), "read () error. Read %d of %d", r, sizeof (img_input));}
-		scale (img_input, img_input, APP_SHARED_WH);
-		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
-		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_SHARED_W, APP_SHARED_H, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
-		//TODO: Find out why we need to bind the pallete texture.
-		glBindTexture (GL_TEXTURE_2D, tex [1]);XGL_ASSERT_ERROR;
-		glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;
-		glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);XGL_ASSERT_ERROR;
-		SDL_GL_SwapWindow (window);
+		if (SDL_AtomicGet (&reader_atomic))
+		{
+			scale (img_input, img_input, LEP3_WH);
+			glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
+			glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, LEP3_W, LEP3_H, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
+			//TODO: Find out why we need to bind the pallete texture.
+			glBindTexture (GL_TEXTURE_2D, tex [1]);XGL_ASSERT_ERROR;
+			glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;
+			glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);XGL_ASSERT_ERROR;
+			SDL_GL_SwapWindow (window);
+			SDL_AtomicSet (&reader_atomic, 0);
+		}
 	}
 	
 main_quit:

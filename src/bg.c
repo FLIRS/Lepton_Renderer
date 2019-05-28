@@ -12,7 +12,8 @@
 #include "xgl.h"
 #include "convert.h"
 #include "map.h"
-#include "app.h"
+#include "lepton.h"
+#include "reader.h"
 
 #define APP_TEX_COUNT 1
 
@@ -21,7 +22,7 @@
 #define APP_RENDER_FORMAT     GL_RGB
 #define APP_RENDER_INTFORMAT  GL_RGB
 #define APP_RENDER_UNIT       0
-#define APP_RENDER_MAG_FILTER GL_NEAREST
+//#define APP_RENDER_MAG_FILTER GL_NEAREST
 #define APP_RENDER_MAG_FILTER GL_LINEAR
 
 #define APP_WIN_X SDL_WINDOWPOS_UNDEFINED
@@ -138,11 +139,13 @@ int main(int argc, char *argv[])
 	glEnable (GL_BLEND);XGL_ASSERT_ERROR;
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);XGL_ASSERT_ERROR;
 	
-	uint16_t img_input [APP_SHARED_WH] = {0};
-	uint16_t img_bg [APP_SHARED_WH] = {0};
-	uint16_t img_fg [APP_SHARED_WH] = {0};
-	uint16_t img_render0 [APP_SHARED_WH] = {0};
-	uint8_t img_render [APP_SHARED_WH * APP_RENDER_C] = {0};
+	uint16_t img_input [LEP3_WH] = {0};
+	uint16_t img_bg [LEP3_WH] = {0};
+	uint16_t img_fg [LEP3_WH] = {0};
+	uint16_t img_render0 [LEP3_WH] = {0};
+	uint8_t img_render [LEP3_WH * APP_RENDER_C] = {0};
+	reader_start (img_input);
+	
 	
 	//Generate texture id for Lepton and Pallete.
 	GLuint tex [APP_TEX_COUNT];
@@ -154,7 +157,7 @@ int main(int argc, char *argv[])
 	glActiveTexture (GL_TEXTURE0 + APP_RENDER_UNIT);XGL_ASSERT_ERROR;
 	glBindTexture (GL_TEXTURE_2D, tex [APP_RENDER_UNIT]);XGL_ASSERT_ERROR;
 	xgl_uniform1i_set (program, "tex", APP_RENDER_UNIT);
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_RENDER_INTFORMAT, APP_SHARED_W, APP_SHARED_H, 0, APP_RENDER_FORMAT, APP_RENDER_TYPE, img_render);XGL_ASSERT_ERROR;
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_RENDER_INTFORMAT, LEP3_W, LEP3_H, 0, APP_RENDER_FORMAT, APP_RENDER_TYPE, img_render);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_RENDER_MAG_FILTER);XGL_ASSERT_ERROR;
@@ -211,45 +214,44 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		
-
-		{int r = read (STDIN_FILENO, img_input, sizeof (img_input)); ASSERT_F (r == sizeof (img_input), "read () error. Read %d of %d", r, sizeof (img_input));}
+		if (SDL_AtomicGet (&reader_atomic))
+		{
+			bgfilter (img_input, img_bg, img_fg, LEP3_WH);
+			scale (img_input, img_render0, LEP3_WH);
+			SDL_AtomicSet (&reader_atomic, 0);
+		}
 
 		switch (show)
 		{
 		case APP_SHOW_FG:
-			bgfilter (img_input, img_bg, img_fg, APP_SHARED_WH);
-			scale (img_fg, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3 (img_render0, img_render, APP_SHARED_WH);
+			scale (img_fg, img_render0, LEP3_WH);
+			convert_u16c1_u8c3 (img_render0, img_render, LEP3_WH);
 			break;
 		case APP_SHOW_BG:
-			bgfilter (img_input, img_bg, img_fg, APP_SHARED_WH);
-			scale (img_bg, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3 (img_render0, img_render, APP_SHARED_WH);
+			scale (img_bg, img_render0, LEP3_WH);
+			convert_u16c1_u8c3 (img_render0, img_render, LEP3_WH);
 			break;
 		case APP_SHOW_BGFG:
-			bgfilter (img_input, img_bg, img_fg, APP_SHARED_WH);
-			scale (img_bg, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3_c (img_render0, img_render, APP_SHARED_WH, 0);
-			scale (img_fg, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3_c (img_render0, img_render, APP_SHARED_WH, 1);
-			scale (img_input, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3_c (img_render0, img_render, APP_SHARED_WH, 2);
+			scale (img_bg, img_render0, LEP3_WH);
+			convert_u16c1_u8c3_c (img_render0, img_render, LEP3_WH, 0);
+			scale (img_fg, img_render0, LEP3_WH);
+			convert_u16c1_u8c3_c (img_render0, img_render, LEP3_WH, 1);
+			scale (img_input, img_render0, LEP3_WH);
+			convert_u16c1_u8c3_c (img_render0, img_render, LEP3_WH, 2);
 			break;
 		default:
-			scale (img_input, img_render0, APP_SHARED_WH);
-			convert_u16c1_u8c3 (img_render0, img_render, APP_SHARED_WH);
+			convert_u16c1_u8c3 (img_render0, img_render, LEP3_WH);
 			break;
 		}
 		
 		//Set all corner pixel red.
 		img_render [0] = 255;
-		img_render [(APP_SHARED_W-1)*APP_RENDER_C] = 255;
-		img_render [(APP_SHARED_WH-1)*APP_RENDER_C] = 255;
-		img_render [(APP_SHARED_WH-APP_SHARED_W)*APP_RENDER_C] = 255;
+		img_render [(LEP3_W-1)*APP_RENDER_C] = 255;
+		img_render [(LEP3_WH-1)*APP_RENDER_C] = 255;
+		img_render [(LEP3_WH-LEP3_W)*APP_RENDER_C] = 255;
 		
 		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
-		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_SHARED_W, APP_SHARED_H, APP_RENDER_FORMAT, APP_RENDER_TYPE, img_render);XGL_ASSERT_ERROR;
+		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, LEP3_W, LEP3_H, APP_RENDER_FORMAT, APP_RENDER_TYPE, img_render);XGL_ASSERT_ERROR;
 		glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;
 		glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);XGL_ASSERT_ERROR;
 		SDL_GL_SwapWindow (window);
