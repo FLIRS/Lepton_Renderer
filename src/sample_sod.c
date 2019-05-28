@@ -12,36 +12,32 @@
 #include "xgl.h"
 #include "pixel.h"
 #include "map.h"
+#include "convert.h"
+#include "sod.h"
 
+#define APP_TEX_COUNT 1
 
 #define APP_TEX_W          160
 #define APP_TEX_H          120
+#define APP_TEX_C          3
 #define APP_TEX_WH         (APP_TEX_W * APP_TEX_H)
-#define APP_TEX_TYPE       GL_UNSIGNED_SHORT
-#define APP_TEX_FORMAT     GL_ALPHA
+#define APP_TEX_WHC        (APP_TEX_W * APP_TEX_H * APP_TEX_C)
+#define APP_TEX_TYPE       GL_UNSIGNED_BYTE
+#define APP_TEX_FORMAT     GL_RGB
+#define APP_TEX_INTFORMAT  GL_RGB
 #define APP_TEX_UNIT       0
 #define APP_TEX_MAG_FILTER GL_NEAREST
 //#define APP_TEX_MAG_FILTER GL_LINEAR
 
-
-#define APP_PAL_W          256
-#define APP_PAL_H          1
-#define APP_PAL_C          4
-#define APP_PAL_WHC        (APP_PAL_W * APP_PAL_H * APP_PAL_C)
-#define APP_PAL_TYPE       GL_UNSIGNED_BYTE
-#define APP_PAL_FORMAT     GL_RGBA
-#define APP_PAL_UNIT       1
-#define APP_PAL_MAG_FILTER GL_NEAREST
-//#define APP_PAL_MAG_FILTER GL_LINEAR
 
 #define APP_WIN_X SDL_WINDOWPOS_UNDEFINED
 #define APP_WIN_Y SDL_WINDOWPOS_UNDEFINED
 #define APP_WIN_W 1920
 #define APP_WIN_H 1080
 #define APP_WIN_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN
-#define APP_WIN_NAME "Test Pallete"
-#define APP_GL_SHADERF "src/cam2d.glfs"
-#define APP_GL_SHADERV "src/cam2d.glvs"
+#define APP_WIN_NAME "FLIR Lepton thermal camera and SOD - An Embedded Computer Vision & Machine Learning Library"
+#define APP_SHADERF "src/rgb.glfs"
+#define APP_SHADERV "src/rgb.glvs"
 
 
 void read_image (uint16_t * pixmap)
@@ -109,13 +105,15 @@ int main(int argc, char *argv[])
 	ASSERT_F (context, "SDL_GL_CreateContext: %s", SDL_GetError());
 	SDL_GL_SetSwapInterval (1);// Use VSYNC
 
+	printf ("%s\n", glGetString(GL_VERSION) );
+
 	GLuint vbo;
 	GLuint ebo;
 	GLuint program;
 	
 	program = glCreateProgram ();XGL_ASSERT_ERROR;
-	xgl_attach_shaderfile (program, APP_GL_SHADERF, GL_FRAGMENT_SHADER);
-	xgl_attach_shaderfile (program, APP_GL_SHADERV, GL_VERTEX_SHADER);
+	xgl_attach_shaderfile (program, APP_SHADERF, GL_FRAGMENT_SHADER);
+	xgl_attach_shaderfile (program, APP_SHADERV, GL_VERTEX_SHADER);
 	glLinkProgram (program);XGL_ASSERT_ERROR;
 	glUseProgram (program);XGL_ASSERT_ERROR;
 	xgl_program_print (program);
@@ -152,38 +150,28 @@ int main(int argc, char *argv[])
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);XGL_ASSERT_ERROR;
 	
 	uint16_t raw [APP_TEX_WH];
-	uint8_t heatmap [APP_PAL_WHC];
-	size_t heatmap_count = APP_PAL_WHC;
-	{
-		int r = pix_load (heatmap, &heatmap_count, "src/heatmap.txt", sizeof (uint8_t));
-		ASSERT (r == 0);
-	}
+	uint8_t raw8 [APP_TEX_WHC];
 	
 	//Generate texture id for Lepton and Pallete.
-	GLuint tex [2];XGL_ASSERT_ERROR;
-	glGenTextures (2, tex);XGL_ASSERT_ERROR;
+	GLuint tex [APP_TEX_COUNT];
+	glGenTextures (APP_TEX_COUNT, tex);XGL_ASSERT_ERROR;
+	
+	
 	
 	//Setup Lepton texture format.
 	glActiveTexture (GL_TEXTURE0 + APP_TEX_UNIT);XGL_ASSERT_ERROR;
 	glBindTexture (GL_TEXTURE_2D, tex [APP_TEX_UNIT]);XGL_ASSERT_ERROR;
 	xgl_uniform1i_set (program, "tex", APP_TEX_UNIT);
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, APP_TEX_W, APP_TEX_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw);XGL_ASSERT_ERROR;
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_INTFORMAT, APP_TEX_W, APP_TEX_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_TEX_MAG_FILTER);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); XGL_ASSERT_ERROR;
 	glGenerateMipmap (GL_TEXTURE_2D);XGL_ASSERT_ERROR;
+	
+	sod_img img = sod_make_image (APP_TEX_W, APP_TEX_H, 1);
+	
 
-	//Setup Pallete texture format.
-	glActiveTexture (GL_TEXTURE0 + APP_PAL_UNIT);XGL_ASSERT_ERROR;
-	glBindTexture (GL_TEXTURE_2D, tex [APP_PAL_UNIT]);XGL_ASSERT_ERROR;
-	xgl_uniform1i_set (program, "pallete", APP_PAL_UNIT);
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_PAL_FORMAT, APP_PAL_W, APP_PAL_H, 0, APP_PAL_FORMAT, APP_PAL_TYPE, heatmap);XGL_ASSERT_ERROR;
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_PAL_MAG_FILTER);XGL_ASSERT_ERROR;
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);XGL_ASSERT_ERROR;
-	glGenerateMipmap (GL_TEXTURE_2D);XGL_ASSERT_ERROR;
 	
 	while (1)
 	{
@@ -225,10 +213,16 @@ int main(int argc, char *argv[])
 		
 		
 		read_image (raw);
+		//grayscale16_to_rgb8 (raw, raw8, APP_TEX_WH);
+		convert_u16c1_f32c1 (raw, img.data, APP_TEX_WH);
+		sod_img binImg = sod_binarize_image (img, 0);
+		sod_img dilImg = sod_dilate_image(binImg, 12);
+		convert_f32c1_u8c3 (dilImg.data, raw8, APP_TEX_WH);
+		sod_free_image (binImg);
+		sod_free_image (dilImg);
+		
 		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
-		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw);XGL_ASSERT_ERROR;
-		//TODO: Find out why we need to bind the pallete texture.
-		glBindTexture (GL_TEXTURE_2D, tex [1]);XGL_ASSERT_ERROR;
+		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
 		glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;
 		glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);XGL_ASSERT_ERROR;
 		SDL_GL_SwapWindow (window);

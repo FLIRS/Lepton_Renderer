@@ -11,10 +11,11 @@
 #include "common.h"
 #include "xgl.h"
 #include "pixel.h"
+#include "map.h"
 
 
-#define APP_TEX_W          256
-#define APP_TEX_H          1
+#define APP_TEX_W          160
+#define APP_TEX_H          120
 #define APP_TEX_WH         (APP_TEX_W * APP_TEX_H)
 #define APP_TEX_TYPE       GL_UNSIGNED_SHORT
 #define APP_TEX_FORMAT     GL_ALPHA
@@ -38,19 +39,43 @@
 #define APP_WIN_W 1920
 #define APP_WIN_H 1080
 #define APP_WIN_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN
-#define APP_WIN_NAME "FLIR Lepton thermal camera showing heatmap using pallete texture"
-#define APP_GL_SHADERF "src/cam2d.glfs"
-#define APP_GL_SHADERV "src/cam2d.glvs"
+#define APP_WIN_NAME "Render using pallete"
+#define APP_SHADERF "src/pallete.glfs"
+#define APP_SHADERV "src/pallete.glvs"
 
-void read_image (uint16_t * pixmap, uint16_t offset)
+
+void read_image (uint16_t * pixmap)
 {
+	size_t const size = APP_TEX_WH * sizeof (uint16_t);
+	int r = read (STDIN_FILENO, pixmap, size);
+	ASSERT_F (r == (int)size, "read () error. Read %d of %d", r, size);
+	
+	uint16_t min = UINT16_MAX;
+	uint16_t max = 0;
+	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
 	for (int i = 0; i < APP_TEX_WH; i++)
 	{
-		int v = 256 * (i + offset);
-		pixmap [i] = (uint16_t)v;
+		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
 	}
 }
 
+/*
+void read_image (uint16_t * pixmap)
+{
+	for (int i = 0; i < APP_TEX_WH; i++)
+	{
+		pixmap [i] = i;
+	}
+	
+	uint16_t min = UINT16_MAX;
+	uint16_t max = 0;
+	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
+	for (int i = 0; i < APP_TEX_WH; i++)
+	{
+		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
+	}
+}
+*/
 
 
 int main(int argc, char *argv[])
@@ -89,8 +114,8 @@ int main(int argc, char *argv[])
 	GLuint program;
 	
 	program = glCreateProgram ();XGL_ASSERT_ERROR;
-	xgl_attach_shaderfile (program, APP_GL_SHADERF, GL_FRAGMENT_SHADER);
-	xgl_attach_shaderfile (program, APP_GL_SHADERV, GL_VERTEX_SHADER);
+	xgl_attach_shaderfile (program, APP_SHADERF, GL_FRAGMENT_SHADER);
+	xgl_attach_shaderfile (program, APP_SHADERV, GL_VERTEX_SHADER);
 	glLinkProgram (program);XGL_ASSERT_ERROR;
 	glUseProgram (program);XGL_ASSERT_ERROR;
 	xgl_program_print (program);
@@ -160,8 +185,6 @@ int main(int argc, char *argv[])
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);XGL_ASSERT_ERROR;
 	glGenerateMipmap (GL_TEXTURE_2D);XGL_ASSERT_ERROR;
 	
-
-	uint16_t iii = 0;
 	while (1)
 	{
 		SDL_Event event;
@@ -201,8 +224,7 @@ int main(int argc, char *argv[])
 		}
 		
 		
-		read_image (raw, iii);
-		iii++;
+		read_image (raw);
 		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
 		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw);XGL_ASSERT_ERROR;
 		//TODO: Find out why we need to bind the pallete texture.

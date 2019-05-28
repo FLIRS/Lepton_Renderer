@@ -2,7 +2,7 @@
 
 
 
-gcc src/render.c \
+gcc src/pallete.c \
 -Isrc \
 -Wall \
 -Wextra \
@@ -23,4 +23,4 @@ gcc src/render.c \
 -lSDL2 \
 -lGLESv2 \
 -lEGL \
--obin/render
+-obin/pallete
