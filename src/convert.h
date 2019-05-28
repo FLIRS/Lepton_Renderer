@@ -21,6 +21,15 @@ void convert_u16c1_u8c3 (uint16_t src [], uint8_t des [], int n)
 }
 
 
+void convert_u16c1_u8c3_c (uint16_t src [], uint8_t des [], int n, uint8_t c)
+{
+	while (n--)
+	{
+		des [n*3+c] = src [n] * UINT8_MAX / UINT16_MAX;
+	}
+}
+
+
 void convert_f32c1_u8c3 (float src [], uint8_t des [], int n)
 {
 	while (n--)

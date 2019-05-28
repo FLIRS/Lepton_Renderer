@@ -33,31 +33,32 @@ void find_range_u16v
 //Input X can get Integer overflow.
 int map_lin_int (int X, int A0, int A1, int B0, int B1)
 {
-   //Crop
-   if (X < A0) {return B0;}
-   if (X > A1) {return B1;}
-   int DA;
-   int DB;
-   //Delta
-   DA = A1 - A0;
-   DB = B1 - B0;
-   //Accurate integer division.
-   //Round up or down
-   if (DA > DB) {DA = DA + 1; DB = DB + 1;}
-   //X = (X-A0) * ((DB + K) / (DA + K)) + B0
-   //Move to zero.
-   X = X - A0;
-   //Scale up before scaling down is important for integers.
-   X = X * DB;
-   //Zero division protection.            
-   if (DA == 0) {return B1;};
-   //Scale down
-   X = X / DA;
-   //Apply offset 
-   X = X + B0;
-   ASSERT (X <= B1);
-   ASSERT (X >= B0);
-   return X;
+	int x = X;
+	//Crop
+	if (X <= A0) {return B0;}
+	if (X >= A1) {return B1;}
+	int DA;
+	int DB;
+	//Delta
+	DA = A1 - A0;
+	DB = B1 - B0;
+	//Accurate integer division.
+	//Round up or down
+	if (DA > DB) {DA = DA + 1; DB = DB + 1;}
+	//X = (X-A0) * ((DB + K) / (DA + K)) + B0
+	//Move to zero.
+	X = X - A0;
+	//Scale up before scaling down is important for integers.
+	X = X * DB;
+	//Zero division protection.            
+	if (DA == 0) {return B1;};
+	//Scale down
+	X = X / DA;
+	//Apply offset 
+	X = X + B0;
+	//ASSERT_F (X <= B1, "%i %i %i %i %i %i", x, X, A0, A1, B0, B1);
+	//ASSERT_F (X >= B0, "%i %i %i %i %i %i", x, X, A0, A1, B0, B1);
+	return X;
 }
 
 
