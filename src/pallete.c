@@ -12,17 +12,13 @@
 #include "xgl.h"
 #include "pixel.h"
 #include "map.h"
+#include "app.h"
 
-
-#define APP_TEX_W          160
-#define APP_TEX_H          120
-#define APP_TEX_WH         (APP_TEX_W * APP_TEX_H)
 #define APP_TEX_TYPE       GL_UNSIGNED_SHORT
 #define APP_TEX_FORMAT     GL_ALPHA
 #define APP_TEX_UNIT       0
 #define APP_TEX_MAG_FILTER GL_NEAREST
 //#define APP_TEX_MAG_FILTER GL_LINEAR
-
 
 #define APP_PAL_W          256
 #define APP_PAL_H          1
@@ -44,38 +40,16 @@
 #define APP_SHADERV "src/pallete.glvs"
 
 
-void read_image (uint16_t * pixmap)
+void scale (uint16_t src [], uint16_t des [], uint32_t n)
 {
-	size_t const size = APP_TEX_WH * sizeof (uint16_t);
-	int r = read (STDIN_FILENO, pixmap, size);
-	ASSERT_F (r == (int)size, "read () error. Read %d of %d", r, size);
-	
 	uint16_t min = UINT16_MAX;
 	uint16_t max = 0;
-	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
-	for (int i = 0; i < APP_TEX_WH; i++)
+	find_range_u16v (src, n, &min, &max);
+	while (n--)
 	{
-		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
+		des [n] = (uint16_t)map_lin_int ((int)src [n], (int)min, (int)max, 0, UINT16_MAX - 1);
 	}
 }
-
-/*
-void read_image (uint16_t * pixmap)
-{
-	for (int i = 0; i < APP_TEX_WH; i++)
-	{
-		pixmap [i] = i;
-	}
-	
-	uint16_t min = UINT16_MAX;
-	uint16_t max = 0;
-	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
-	for (int i = 0; i < APP_TEX_WH; i++)
-	{
-		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
-	}
-}
-*/
 
 
 int main(int argc, char *argv[])
@@ -151,7 +125,7 @@ int main(int argc, char *argv[])
 	glEnable (GL_BLEND);XGL_ASSERT_ERROR;
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);XGL_ASSERT_ERROR;
 	
-	uint16_t raw [APP_TEX_WH];
+	uint16_t img_input [APP_SHARED_WH];
 	uint8_t heatmap [APP_PAL_WHC];
 	size_t heatmap_count = APP_PAL_WHC;
 	{
@@ -167,7 +141,8 @@ int main(int argc, char *argv[])
 	glActiveTexture (GL_TEXTURE0 + APP_TEX_UNIT);XGL_ASSERT_ERROR;
 	glBindTexture (GL_TEXTURE_2D, tex [APP_TEX_UNIT]);XGL_ASSERT_ERROR;
 	xgl_uniform1i_set (program, "tex", APP_TEX_UNIT);
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, APP_TEX_W, APP_TEX_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw);XGL_ASSERT_ERROR;
+	for (int i = 0; i < APP_SHARED_WH; i++){img_input [i] = i;}
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_FORMAT, APP_SHARED_W, APP_SHARED_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_TEX_MAG_FILTER);XGL_ASSERT_ERROR;
@@ -223,10 +198,11 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		
-		read_image (raw);
+		//for (int i = 0; i < APP_SHARED_WH; i++){img_input [i] = i;}
+		{int r = read (STDIN_FILENO, img_input, sizeof (img_input)); ASSERT_F (r == sizeof (img_input), "read () error. Read %d of %d", r, sizeof (img_input));}
+		scale (img_input, img_input, APP_SHARED_WH);
 		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
-		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw);XGL_ASSERT_ERROR;
+		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_SHARED_W, APP_SHARED_H, APP_TEX_FORMAT, APP_TEX_TYPE, img_input);XGL_ASSERT_ERROR;
 		//TODO: Find out why we need to bind the pallete texture.
 		glBindTexture (GL_TEXTURE_2D, tex [1]);XGL_ASSERT_ERROR;
 		glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;

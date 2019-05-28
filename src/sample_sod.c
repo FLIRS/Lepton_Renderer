@@ -13,15 +13,12 @@
 #include "pixel.h"
 #include "map.h"
 #include "convert.h"
+#include "app.h"
 #include "sod.h"
 
 #define APP_TEX_COUNT 1
 
-#define APP_TEX_W          160
-#define APP_TEX_H          120
 #define APP_TEX_C          3
-#define APP_TEX_WH         (APP_TEX_W * APP_TEX_H)
-#define APP_TEX_WHC        (APP_TEX_W * APP_TEX_H * APP_TEX_C)
 #define APP_TEX_TYPE       GL_UNSIGNED_BYTE
 #define APP_TEX_FORMAT     GL_RGB
 #define APP_TEX_INTFORMAT  GL_RGB
@@ -39,40 +36,27 @@
 #define APP_SHADERF "src/rgb.glfs"
 #define APP_SHADERV "src/rgb.glvs"
 
-
-void read_image (uint16_t * pixmap)
+void bgfilter (uint16_t src [], uint16_t bg [], uint16_t fg [], uint32_t n)
 {
-	size_t const size = APP_TEX_WH * sizeof (uint16_t);
-	int r = read (STDIN_FILENO, pixmap, size);
-	ASSERT_F (r == (int)size, "read () error. Read %d of %d", r, size);
-	
-	uint16_t min = UINT16_MAX;
-	uint16_t max = 0;
-	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
-	for (int i = 0; i < APP_TEX_WH; i++)
+	float k = 0.02f;
+	while (n--)
 	{
-		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
+		bg [n] = k*(float)src [n] + (1.0f-k)*(float)bg [n];
+		int32_t d = (int32_t)bg [n] - (int32_t)src [n];
+		fg [n] = abs (d);
 	}
 }
 
-/*
-void read_image (uint16_t * pixmap)
+void scale (uint16_t src [], uint16_t des [], uint32_t n)
 {
-	for (int i = 0; i < APP_TEX_WH; i++)
-	{
-		pixmap [i] = i;
-	}
-	
 	uint16_t min = UINT16_MAX;
 	uint16_t max = 0;
-	find_range_u16v (pixmap, APP_TEX_WH, &min, &max);
-	for (int i = 0; i < APP_TEX_WH; i++)
+	find_range_u16v (src, n, &min, &max);
+	while (n--)
 	{
-		pixmap [i] = (uint16_t)map_lin_int ((int)pixmap [i], (int)min, (int)max, 0, UINT16_MAX - 1);
+		des [n] = (uint16_t)map_lin_int ((int)src [n], (int)min, (int)max, 0, UINT16_MAX - 1);
 	}
 }
-*/
-
 
 int main(int argc, char *argv[])
 {
@@ -149,8 +133,10 @@ int main(int argc, char *argv[])
 	glEnable (GL_BLEND);XGL_ASSERT_ERROR;
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);XGL_ASSERT_ERROR;
 	
-	uint16_t raw [APP_TEX_WH];
-	uint8_t raw8 [APP_TEX_WHC];
+	uint16_t img_input [APP_SHARED_WH];
+	uint16_t img_bg [APP_SHARED_WH];
+	uint16_t img_fg [APP_SHARED_WH];
+	uint8_t raw8 [APP_SHARED_WH * APP_TEX_C];
 	
 	//Generate texture id for Lepton and Pallete.
 	GLuint tex [APP_TEX_COUNT];
@@ -162,14 +148,14 @@ int main(int argc, char *argv[])
 	glActiveTexture (GL_TEXTURE0 + APP_TEX_UNIT);XGL_ASSERT_ERROR;
 	glBindTexture (GL_TEXTURE_2D, tex [APP_TEX_UNIT]);XGL_ASSERT_ERROR;
 	xgl_uniform1i_set (program, "tex", APP_TEX_UNIT);
-	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_INTFORMAT, APP_TEX_W, APP_TEX_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
+	glTexImage2D (GL_TEXTURE_2D, 0, APP_TEX_INTFORMAT, APP_SHARED_W, APP_SHARED_H, 0, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, APP_TEX_MAG_FILTER);XGL_ASSERT_ERROR;
 	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); XGL_ASSERT_ERROR;
 	glGenerateMipmap (GL_TEXTURE_2D);XGL_ASSERT_ERROR;
 	
-	sod_img img = sod_make_image (APP_TEX_W, APP_TEX_H, 1);
+	sod_img img = sod_make_image (APP_SHARED_W, APP_SHARED_H, 1);
 	
 
 	
@@ -211,18 +197,18 @@ int main(int argc, char *argv[])
 			}
 		}
 		
-		
-		read_image (raw);
-		//grayscale16_to_rgb8 (raw, raw8, APP_TEX_WH);
-		convert_u16c1_f32c1 (raw, img.data, APP_TEX_WH);
+		{int r = read (STDIN_FILENO, img_input, sizeof (img_input)); ASSERT_F (r == sizeof (img_input), "read () error. Read %d of %d", r, sizeof (img_input));}
+		bgfilter (img_input, img_bg, img_fg, APP_SHARED_WH);
+		scale (img_fg, img_fg, APP_SHARED_WH);
+		convert_u16c1_f32c1 (img_fg, img.data, APP_SHARED_WH);
 		sod_img binImg = sod_binarize_image (img, 0);
-		sod_img dilImg = sod_dilate_image(binImg, 12);
-		convert_f32c1_u8c3 (dilImg.data, raw8, APP_TEX_WH);
+		sod_img dilImg = sod_dilate_image(binImg, 2);
+		convert_f32c1_u8c3 (dilImg.data, raw8, APP_SHARED_WH);
 		sod_free_image (binImg);
 		sod_free_image (dilImg);
 		
 		glBindTexture(GL_TEXTURE_2D, tex [0]);XGL_ASSERT_ERROR;
-		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_TEX_W, APP_TEX_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
+		glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, APP_SHARED_W, APP_SHARED_H, APP_TEX_FORMAT, APP_TEX_TYPE, raw8);XGL_ASSERT_ERROR;
 		glClear (GL_COLOR_BUFFER_BIT);XGL_ASSERT_ERROR;
 		glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);XGL_ASSERT_ERROR;
 		SDL_GL_SwapWindow (window);

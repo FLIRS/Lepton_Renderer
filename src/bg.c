@@ -12,12 +12,9 @@
 #include "xgl.h"
 #include "convert.h"
 #include "map.h"
+#include "app.h"
 
 #define APP_TEX_COUNT 1
-
-#define APP_SHARED_W 160
-#define APP_SHARED_H 120
-#define APP_SHARED_WH (APP_SHARED_W * APP_SHARED_H)
 
 #define APP_RENDER_C          3
 #define APP_RENDER_TYPE       GL_UNSIGNED_BYTE
@@ -26,7 +23,6 @@
 #define APP_RENDER_UNIT       0
 #define APP_RENDER_MAG_FILTER GL_NEAREST
 #define APP_RENDER_MAG_FILTER GL_LINEAR
-
 
 #define APP_WIN_X SDL_WINDOWPOS_UNDEFINED
 #define APP_WIN_Y SDL_WINDOWPOS_UNDEFINED
