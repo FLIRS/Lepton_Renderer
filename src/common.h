@@ -6,10 +6,17 @@
 #include <stdio.h>
 
 
-
+#ifndef MIN
 #define MIN(a, b) (((a)<(b))?(a):(b))
+#endif
+
+#ifndef MAX
 #define MAX(a, b) (((a)>(b))?(a):(b))
+#endif
+
+#ifndef COUNTOF
 #define COUNTOF(x) (sizeof(x) / sizeof(*(x)))
+#endif
 
 uint32_t str_u32 (char const * str)
 {
