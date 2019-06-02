@@ -20,8 +20,7 @@
 #include "xgl.h"
 #include "lepton.h"
 #include "reader.h"
-
-#include "CM.hpp"
+#include "cm.hpp"
 
 #define APP_TEX_COUNT 1
 
@@ -35,8 +34,8 @@
 
 #define APP_WIN_X SDL_WINDOWPOS_UNDEFINED
 #define APP_WIN_Y SDL_WINDOWPOS_UNDEFINED
-#define APP_WIN_W 1920
-#define APP_WIN_H 1080
+#define APP_WIN_W LEP3_W
+#define APP_WIN_H LEP3_H
 #define APP_WIN_FLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN
 #define APP_WIN_NAME "Test background filter"
 #define APP_SHADERF "src/rgb.glfs"
@@ -158,18 +157,22 @@ int main(int argc, char *argv[])
 	Params.filterByInertia = false;
 	Params.minInertiaRatio = 0.0;
 	Params.maxInertiaRatio = 0.5;
-
+	cv::Ptr<cv::BackgroundSubtractor> Subtractor = cv::createBackgroundSubtractorMOG2 ();
 	cv::Ptr<cv::SimpleBlobDetector> Blobber = cv::SimpleBlobDetector::create (Params);
 	std::vector<cv::KeyPoint> Targets;
-	std::vector<CM_Tracker> Trackers (4);
-	for (size_t i = 0; i < Trackers.size (); i++)
-	{
-		Trackers [i].Id = i;
-	}
 	
-	cv::Ptr<cv::BackgroundSubtractor> Subtractor = cv::createBackgroundSubtractorMOG2 ();
-
-	struct CM_Counter Counter = {0, 0, 0, 0};
+	struct
+	{
+		#define TRACKER_COUNT 4
+		cv::Point2f p [TRACKER_COUNT]; //Position
+		cv::Point2f v [TRACKER_COUNT]; //Delta
+		int pe [TRACKER_COUNT]; //Persistance
+		int t [TRACKER_COUNT]; //Time tracked
+	} tracker;
+	struct cm_4way way;
+	memset (&way, 0, sizeof (way));
+	memset (&tracker, 0, sizeof (tracker));
+	
 	
 	while (1)
 	{
@@ -211,27 +214,44 @@ int main(int argc, char *argv[])
 		
 		if (SDL_AtomicGet (&reader_atomic))
 		{
+			int x, y;
+			if (SDL_GetMouseState(&x, &y) & SDL_BUTTON (SDL_BUTTON_LEFT))
+			{
+				int w, h;
+				SDL_GetWindowSize(window,&w,&h);
+				cv::circle (m_source, cv::Point2i (x*LEP3_W/w, y*LEP3_H/h), 6.0f, cv::Scalar (255), -1);
+			}
 			Subtractor->apply (m_source, m_fg);
 			cv::GaussianBlur (m_fg, m_b, cv::Size (11, 11), 3.5, 3.5);
 			cv::cvtColor (m_b, m_render, cv::COLOR_GRAY2BGR);
 			Blobber->detect (m_b, Targets);
-			Persistent_Tracker (Targets, Trackers);
-			Countman (Trackers, Counter);
 			
+			cm_track (Targets, tracker.p, tracker.v, tracker.pe, tracker.t, TRACKER_COUNT);
+			bool counted = cm_countman (tracker.p, tracker.v, tracker.pe, tracker.t, TRACKER_COUNT, way);
+			if (counted) {cm_4way_print (way);}
+	
 			for (size_t i = 0; i < Targets.size (); i++)
 			{
 				cv::circle (m_render, Targets [i].pt, 6.0f, cv::Scalar (0, 255, 0), 1);
 			}
 			
-			for (size_t i = 0; i < Trackers.size (); i++)
+			for (size_t i = 0; i < TRACKER_COUNT; i++)
 			{
 				char text [2];
-				snprintf (text, 2, "%d", Trackers [i].Id);
-				cv::putText (m_render, text, Trackers [i].P + cv::Point2f (-3.0f, 3.0f), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.4, cv::Scalar (0, 0, 255), 1);
-				if (Trackers [i].Persistence > 0)
+				snprintf (text, 2, "%d", i);
+				cv::putText (m_render, text, tracker.p [i] + cv::Point2f (-3.0f, 3.0f), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.4, cv::Scalar (0, 0, 255), 1);
+				if (tracker.pe [i] > 0)
 				{
-					cv::circle (m_render, Trackers [i].P, 6.0f, cv::Scalar (255, 0, 0), 1);
+					cv::circle (m_render, tracker.p [i], 6.0f, cv::Scalar (255, 0, 0), 1);
 				}
+			}
+			
+			for (size_t i = 0; i < TRACKER_COUNT; i++)
+			{
+				if (tracker.t [i] != -1) {continue;}
+				printf ("Tracker %i departured\n", i);
+				memset (&tracker, 0, sizeof (tracker));
+				tracker.p [i] = {(float)LEP3_W / 2.0f, (float)LEP3_H / 2.0f};
 			}
 			
 			cv::rectangle (m_render, CM_N, cv::Scalar (255, 0, 255));
