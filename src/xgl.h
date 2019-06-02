@@ -16,13 +16,13 @@ char const * xgl_enum_str (GLenum type)
 {
 	switch (type)
 	{
-		case GL_VERTEX_SHADER:                  return "GL_VERTEX_SHADER";
-		case GL_FRAGMENT_SHADER:                return "GL_FRAGMENT_SHADER";
-		case GL_INVALID_OPERATION:              return "GL_INVALID_OPERATION";
-		case GL_INVALID_ENUM:                   return "GL_INVALID_ENUM";
-		case GL_INVALID_VALUE:                  return "GL_INVALID_VALUE";
-		case GL_INVALID_FRAMEBUFFER_OPERATION:  return "GL_INVALID_FRAMEBUFFER_OPERATION";
-		case GL_OUT_OF_MEMORY:                  return "GL_OUT_OF_MEMORY";
+		case GL_VERTEX_SHADER:                  return "VERTEX_SHADER";
+		case GL_FRAGMENT_SHADER:                return "FRAGMENT_SHADER";
+		case GL_INVALID_OPERATION:              return "INVALID_OPERATION";
+		case GL_INVALID_ENUM:                   return "INVALID_ENUM";
+		case GL_INVALID_VALUE:                  return "INVALID_VALUE";
+		case GL_INVALID_FRAMEBUFFER_OPERATION:  return "INVALID_FRAMEBUFFER_OPERATION";
+		case GL_OUT_OF_MEMORY:                  return "OUT_OF_MEMORY";
 		default: return "";
 	}
 	return "";
@@ -34,8 +34,8 @@ char const * xgl_bool_str (GLint value)
 {
 	switch (value)
 	{
-		case GL_TRUE:return "GL_TRUE";
-		case GL_FALSE:return "GL_FALSE";
+		case GL_TRUE:return "TRUE";
+		case GL_FALSE:return "FALSE";
 		default: return "";
 	}
 	return "";
@@ -103,27 +103,102 @@ void xgl_attach_shaderfile (GLuint program, char const * filename, GLenum kind)
 }
 
 
-struct xgl_program_info
+enum xgl_type
 {
-	GLint type;
-	GLint delete_status;
-	GLint compile_status;
-	GLint infolog_length;
-	GLint source_length;
-	char * log;
+	XGL_SHADER_TYPE,
+	XGL_SHADER_DELETE_STATUS,
+	XGL_SHADER_COMPILE_STATUS,
+	XGL_SHADER_INFO_LOG_TEXT,
+	XGL_SHADER_INFO_LOG_LENGTH,
+	XGL_SHADER_SOURCE_TEXT,
+	XGL_SHADER_SOURCE_LENGTH,
+	XGL_PROGRAM_DELETE_STATUS,
+	XGL_PROGRAM_LINK_STATUS,
+	XGL_PROGRAM_VALIDATE_STATUS,
+	XGL_PROGRAM_INFO_LOG_LENGTH,
+	XGL_PROGRAM_ATTACHED_SHADERS,
+	XGL_PROGRAM_ACTIVE_ATTRIBUTES,
+	XGL_PROGRAM_ACTIVE_ATTRIBUTE_MAX_LENGTH,
+	XGL_PROGRAM_ACTIVE_UNIFORMS,
+	XGL_PROGRAM_ACTIVE_UNIFORM_MAX_LENGTH,
 };
 
 
-void xgl_program_info_get (GLuint shader, struct xgl_program_info * info)
+void xgl_print (FILE * f, GLuint obj, enum xgl_type type, int flen)
 {
-	glGetShaderiv (shader, GL_SHADER_TYPE, &info->type);
-	glGetShaderiv (shader, GL_DELETE_STATUS, &info->delete_status);
-	glGetShaderiv (shader, GL_COMPILE_STATUS, &info->compile_status);
-	glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &info->infolog_length);
-	glGetShaderiv (shader, GL_SHADER_SOURCE_LENGTH, &info->source_length);
-	GLsizei l = info->infolog_length;
-	info->log = (char *) malloc (sizeof (char) * (size_t)l);
-	glGetShaderInfoLog (shader, l, &l, info->log);
+	char text [100];
+	GLint i;
+	switch (type)
+	{
+	case XGL_SHADER_TYPE:
+		glGetShaderiv (obj, GL_SHADER_TYPE, &i);
+		fprintf (f, "%*s", flen, xgl_enum_str ((GLenum)i));
+		break;
+	case XGL_SHADER_DELETE_STATUS:
+		glGetShaderiv (obj, GL_DELETE_STATUS, &i);
+		fprintf (f, "%*s", flen, xgl_bool_str (i));
+		break;
+	case XGL_SHADER_COMPILE_STATUS:
+		glGetShaderiv (obj, GL_COMPILE_STATUS, &i);
+		fprintf (f, "%*s", flen, xgl_bool_str (i));
+		break;
+	case XGL_SHADER_INFO_LOG_LENGTH:
+		glGetShaderiv (obj, GL_INFO_LOG_LENGTH, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_SHADER_INFO_LOG_TEXT:
+		glGetShaderInfoLog (obj, sizeof (text), NULL, text);
+		ASSERT (flen <= 100);
+		fprintf (f, "%.*s", flen, text);
+		break;
+	case XGL_SHADER_SOURCE_LENGTH:
+		glGetShaderiv (obj, GL_SHADER_SOURCE_LENGTH, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_SHADER_SOURCE_TEXT:
+		glGetShaderSource (obj, sizeof (text), NULL, text);
+		ASSERT (flen <= 100);
+		fprintf (f, "%.*s", flen, text);
+		break;
+	case XGL_PROGRAM_DELETE_STATUS:
+		glGetProgramiv (obj, GL_DELETE_STATUS, &i);
+		fprintf (f, "%*s", flen, xgl_bool_str (i));
+		break;
+	case XGL_PROGRAM_LINK_STATUS:
+		glGetProgramiv (obj, GL_LINK_STATUS, &i);
+		fprintf (f, "%*s", flen, xgl_bool_str (i));
+		break;
+	case XGL_PROGRAM_VALIDATE_STATUS:
+		glGetProgramiv (obj, GL_VALIDATE_STATUS, &i);
+		fprintf (f, "%*s", flen, xgl_bool_str (i));
+		break;
+	case XGL_PROGRAM_INFO_LOG_LENGTH:
+		glGetProgramiv (obj, GL_INFO_LOG_LENGTH, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_PROGRAM_ATTACHED_SHADERS:
+		glGetProgramiv (obj, GL_ATTACHED_SHADERS, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_PROGRAM_ACTIVE_ATTRIBUTES:
+		glGetProgramiv (obj, GL_ACTIVE_ATTRIBUTES, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_PROGRAM_ACTIVE_ATTRIBUTE_MAX_LENGTH:
+		glGetProgramiv (obj, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_PROGRAM_ACTIVE_UNIFORMS:
+		glGetProgramiv (obj, GL_ACTIVE_UNIFORMS, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	case XGL_PROGRAM_ACTIVE_UNIFORM_MAX_LENGTH:
+		glGetProgramiv (obj, GL_ACTIVE_UNIFORM_MAX_LENGTH, &i);
+		fprintf (f, "%*i", flen, i);
+		break;
+	default:
+		break;
+	}
 }
 
 
@@ -133,24 +208,40 @@ void xgl_program_print (GLuint program)
 	GLsizei n = XGL_SHADER_NMAX;
 	GLuint shaders [XGL_SHADER_NMAX];
 	glGetAttachedShaders (program, n, &n, shaders);
+	
 	fprintf (f, "\u250C");
-	fprintf (f, "%8s %8s %20s %10s %10s %10s %10s\n", "PROGRAM", "SHADER", "TYPE", "DELETE", "COMPILE", "LOGLEN", "SRCLEN");
+	fprintf (f, "%8s%10s%10s%10s%5s%10s%10s%10s\n", "PROGRAM", "LINK", "VALIDATE", "DELETE", "INFO", "ATTACHED", "ACTIVEA", "ACTIVEU");
+	fprintf (f, "\u251C");
+	fprintf (f, "%8i", program);
+	xgl_print (stderr, program, XGL_PROGRAM_DELETE_STATUS, 10);
+	xgl_print (stderr, program, XGL_PROGRAM_LINK_STATUS, 10);
+	xgl_print (stderr, program, XGL_PROGRAM_VALIDATE_STATUS, 10);
+	xgl_print (stderr, program, XGL_PROGRAM_INFO_LOG_LENGTH, 5);
+	xgl_print (stderr, program, XGL_PROGRAM_ATTACHED_SHADERS, 10);
+	xgl_print (stderr, program, XGL_PROGRAM_ACTIVE_ATTRIBUTES, 10);
+	//xgl_print (stderr, program, XGL_PROGRAM_ACTIVE_ATTRIBUTE_MAX_LENGTH, 20);
+	xgl_print (stderr, program, XGL_PROGRAM_ACTIVE_UNIFORMS, 10);
+	//xgl_print (stderr, program, XGL_PROGRAM_ACTIVE_UNIFORM_MAX_LENGTH, 20);
+	fprintf (f, "\n");
+	
+	fprintf (f, "\u250C");
+	fprintf (f, "%7s%16s%8s%8s%8s%8s\n", "SHADER", "TYPE", "DELETE", "COMPILE", "LOGLEN", "SRCLEN");
 	for (GLsizei i = 0; i < n; ++ i)
 	{
-		struct xgl_program_info info;
-		xgl_program_info_get (shaders [i], &info);
 		fprintf (f, "\u251C");
-		fprintf (f, "%8i ", (int) program);
-		fprintf (f, "%8i ", (int) shaders [i]);
-		fprintf (f, "%20s " , xgl_enum_str ((GLenum)info.type));
-		if (info.delete_status) {fprintf (f, XGL_COLOR_SUCCESS "%10s " TCOL_RESET, xgl_bool_str (info.delete_status));}
-		else {fprintf (f, XGL_COLOR_ERROR "%10s " TCOL_RESET, xgl_bool_str (info.delete_status));}
-		if (info.compile_status) {fprintf (f, XGL_COLOR_SUCCESS "%10s " TCOL_RESET, xgl_bool_str (info.compile_status));}
-		else {fprintf (f, XGL_COLOR_ERROR "%10s " TCOL_RESET, xgl_bool_str (info.compile_status));}
-		fprintf (f, "%10i ", (int) info.infolog_length);
-		fprintf (f, "%10i ", (int) info.source_length);
-		fprintf (f, "%.*s", info.infolog_length, info.log);
+		fprintf (f, "%7i", shaders [i]);
+		xgl_print (stderr, shaders [i], XGL_SHADER_TYPE, 16);
+		xgl_print (stderr, shaders [i], XGL_SHADER_DELETE_STATUS, 8);
+		xgl_print (stderr, shaders [i], XGL_SHADER_COMPILE_STATUS, 8);
+		xgl_print (stderr, shaders [i], XGL_SHADER_INFO_LOG_LENGTH, 8);
+		//xgl_print (stderr, shaders [i], XGL_SHADER_SOURCE_TEXT, 20);
+		xgl_print (stderr, shaders [i], XGL_SHADER_SOURCE_LENGTH, 8);
+		fprintf (f, "\n");
+		fprintf (f, "\u251C LOG: ");
+		xgl_print (stderr, shaders [i], XGL_SHADER_INFO_LOG_TEXT, 100);
 		fprintf (f, "\n");
 	}
 	fflush (f);
 }
+
+

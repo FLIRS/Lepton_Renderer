@@ -99,8 +99,8 @@ int main(int argc, char *argv[])
 	xgl_attach_shaderfile (program, APP_SHADERF, GL_FRAGMENT_SHADER);
 	xgl_attach_shaderfile (program, APP_SHADERV, GL_VERTEX_SHADER);
 	glLinkProgram (program);XGL_ASSERT_ERROR;
-	glUseProgram (program);XGL_ASSERT_ERROR;
 	xgl_program_print (program);
+	glUseProgram (program);XGL_ASSERT_ERROR;
 	
 	float vertices [] = 
 	{   //x      y     s      t

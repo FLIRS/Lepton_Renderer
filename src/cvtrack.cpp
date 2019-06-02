@@ -277,6 +277,8 @@ int main(int argc, char *argv[])
 main_quit:
 	glUseProgram (0);
 	glDisableVertexAttribArray (0);
+	//If the program shaders are flagged for deletion then 
+	//they will be automatically deleted when the program is deleted.
 	glDeleteProgram (program);
 	glDeleteBuffers (1, &(ebo));
 	glDeleteBuffers (1, &(vbo));
