@@ -237,7 +237,12 @@ void xgl_program_print (GLuint program)
 		//xgl_print (stderr, shaders [i], XGL_SHADER_SOURCE_TEXT, 20);
 		xgl_print (stderr, shaders [i], XGL_SHADER_SOURCE_LENGTH, 8);
 		fprintf (f, "\n");
-		fprintf (f, "\u251C LOG: ");
+	}
+
+	
+	for (GLsizei i = 0; i < n; ++ i)
+	{
+		fprintf (f, "SHADER %i INFO_LOG:\n", shaders [i]);
 		xgl_print (stderr, shaders [i], XGL_SHADER_INFO_LOG_TEXT, 100);
 		fprintf (f, "\n");
 	}
